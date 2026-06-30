@@ -746,46 +746,28 @@ elif st.session_state.current_page == "jd":
     # ═══════════════════════════════
     if st.session_state.jd_mode == "single":
         if st.session_state.jd_last_result is None:
-            st.markdown("""
-            <div style="display:flex;gap:12px;margin-bottom:20px;max-width:520px;margin-left:auto;margin-right:auto;">
-                <div style="flex:1;text-align:center;padding:14px 8px;background:#fafaf9;border:1px solid #e7e5e4;border-radius:10px;">
-                    <div style="font-size:12px;font-weight:550;color:#1c1917;">1. 粘贴 JD</div>
-                    <div style="font-size:11px;color:#a8a29e;margin-top:2px;">从招聘网站复制</div>
-                </div>
-                <div style="display:flex;align-items:center;color:#d6d3d1;font-size:16px;">→</div>
-                <div style="flex:1;text-align:center;padding:14px 8px;background:#fafaf9;border:1px solid #e7e5e4;border-radius:10px;">
-                    <div style="font-size:12px;font-weight:550;color:#1c1917;">2. AI 拆解</div>
-                    <div style="font-size:11px;color:#a8a29e;margin-top:2px;">技能·关键词·建议</div>
-                </div>
-                <div style="display:flex;align-items:center;color:#d6d3d1;font-size:16px;">→</div>
-                <div style="flex:1;text-align:center;padding:14px 8px;background:#fafaf9;border:1px solid #e7e5e4;border-radius:10px;">
-                    <div style="font-size:12px;font-weight:550;color:#1c1917;">3. 对照准备</div>
-                    <div style="font-size:11px;color:#a8a29e;margin-top:2px;">查漏补缺面试</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("")
 
         jd_text = st.text_area(
             "粘贴岗位 JD",
-            placeholder="从招聘网站直接复制粘贴，支持任意格式…\n\n示例：\n【岗位】AI产品经理实习生\n【职责】\n1. 负责AI产品的需求分析和产品设计…\n2. 参与用户调研，输出用户洞察…\n【要求】\n1. 2026届及以上在校生…",
+            placeholder="从招聘网站直接复制粘贴，支持任意格式…",
             height=240,
-            key="jd_input",
             label_visibility="collapsed",
             value=st.session_state.jd_last_input,
         )
 
-        EXAMPLE_JD = """【岗位名称】AI产品经理实习生
+        EXAMPLE_JD = """【岗位名称】HR实习生
 【工作职责】
-1. 参与AI产品需求分析、用户调研与竞品分析，输出PRD
-2. 协助产品经理完成产品功能设计与迭代优化
-3. 跟进研发、测试、设计等环节，推动产品落地
-4. 分析产品数据，输出优化建议
+1. 协助招聘流程推进，包括简历筛选、面试安排与跟进
+2. 参与员工入职培训及新员工融入计划的执行
+3. 维护招聘渠道，整理并分析招聘数据
+4. 支持员工关系、企业文化活动等日常HR事务
 【任职要求】
 1. 2026届及以上在校生，每周实习4天以上
-2. 对AI技术（大模型/NLP/CV等）有基本理解
-3. 具备数据分析能力，熟练使用SQL、Excel
-4. 优秀的沟通表达和逻辑思维能力
-5. 有产品实习经验或项目经验优先"""
+2. 对人力资源工作有基本认知，人力资源/心理学/管理学相关专业优先
+3. 熟练使用Excel等办公软件，具备数据整理能力
+4. 优秀的沟通表达和亲和力，做事细致有条理
+5. 有HR实习经验或校园招聘经历优先"""
 
         st.caption(f"{len(jd_text)} 字")
         btn_c1, btn_c2 = st.columns([1, 1])
