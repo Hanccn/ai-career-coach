@@ -59,9 +59,11 @@ def get_client() -> OpenAI:
                 "2. 填入你的 DeepSeek API Key\n"
                 "3. 从 https://platform.deepseek.com 获取"
             )
+        import httpx
         _client = OpenAI(
             api_key=key,
             base_url=DEEPSEEK_BASE_URL,
+            http_client=httpx.Client(trust_env=False),  # 跳过系统代理，避免 TLS 中间人问题
         )
     return _client
 

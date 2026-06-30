@@ -1,7 +1,8 @@
 """
-AI 求职助手 —— 产品经理实习项目 #3
+AI Career Copilot —— AI 职业成长助手
 技术栈：Streamlit + DeepSeek API
 
+帮助大学生和职业探索者完成：职业探索 → 岗位认知 → 能力评估 → 学习规划 → 求职准备 → 持续成长
 运行方式：
     streamlit run app.py
 """
@@ -34,8 +35,8 @@ from src.stats import (
 # 页面配置
 # ═══════════════════════════════════════════
 st.set_page_config(
-    page_title="AI 求职助手 | JobCoach",
-    page_icon="📄",
+    page_title="AI Career Copilot | AI 职业成长助手",
+    page_icon="🧭",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -331,10 +332,10 @@ if "current_page" not in st.session_state:
 with st.sidebar:
     st.markdown("""
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <span style="font-size:28px;">📄</span>
+        <span style="font-size:28px;">🧭</span>
         <div>
-            <div style="font-size:18px;font-weight:700;color:#1e293b;">JobCoach</div>
-            <div style="font-size:12px;color:#94a3b8;">AI 求职助手</div>
+            <div style="font-size:18px;font-weight:700;color:#1e293b;">Career Copilot</div>
+            <div style="font-size:12px;color:#94a3b8;">AI 职业成长助手</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -344,11 +345,12 @@ with st.sidebar:
     # 导航项
     nav_items = [
         ("🏠", "首页", "home"),
-        ("📋", "JD 分析", "jd"),
-        ("✂️", "简历优化", "resume"),
+        ("🧭", "职业探索", "career_explore"),
+        ("📋", "岗位认知", "jd"),
+        ("📝", "简历优化", "resume"),
         ("🗺️", "学习路线", "roadmap"),
         ("💬", "AI 模拟面试", "interview"),
-        ("👤", "我的", "profile"),
+        ("👤", "我的成长", "profile"),
     ]
 
     for emoji, label, key in nav_items:
@@ -429,30 +431,11 @@ def _show_flow_nav(current_step: int):
 
 
 def _show_resume_input_compact():
-    """差距分析入口——输入文字或上传 PDF"""
+    """差距分析入口——上传 PDF 简历"""
     st.markdown("""
-    <div style="margin-top:12px;font-size:12px;color:#a8a29e;">贴简历文字或上传 PDF，直接跟这份 JD 做差距分析</div>
+    <div style="margin-top:12px;font-size:12px;color:#a8a29e;">上传简历 PDF，直接跟这份 JD 做差距分析</div>
     """, unsafe_allow_html=True)
-    inline_resume = st.text_area(
-        "简历文字",
-        placeholder="粘贴你的简历…",
-        height=100, key="jd_inline_resume", label_visibility="collapsed",
-    )
-    if inline_resume.strip():
-        st.session_state.user_resume = inline_resume
-        st.rerun()
-
-    # PDF 上传——CSS 拉到输入框内部右下角
-    st.markdown("""
-    <style>
-    #jd-pdf-upload-area { margin-top: -34px; position: relative; z-index: 5; display: flex; justify-content: flex-end; padding-right: 8px; }
-    #jd-pdf-upload-area button { font-size: 11px !important; padding: 2px 10px !important; border-radius: 6px !important; background: #f5f5f4 !important; border: 1px solid #e7e5e4 !important; color: #78716c !important; }
-    #jd-pdf-upload-area section { justify-content: flex-end; }
-    </style>
-    <div id="jd-pdf-upload-area">
-    """, unsafe_allow_html=True)
-    uploaded = st.file_uploader("PDF", type=["pdf"], key="jd_pdf_upload", label_visibility="collapsed")
-    st.markdown("</div>", unsafe_allow_html=True)
+    uploaded = st.file_uploader("上传简历 PDF", type=["pdf"], key="jd_pdf_upload", label_visibility="collapsed")
     if uploaded is not None:
             _parse_pdf(uploaded)
 
@@ -634,85 +617,182 @@ def _show_cached_result():
 # ── 页面：首页 ──
 # ═══════════════════════════════════════════
 if st.session_state.current_page == "home":
-    # hero —— 干净，无大 emoji
+    # hero
     st.markdown("""
     <div style="text-align:center;padding:48px 20px 40px;">
         <h1 style="font-size:2rem!important;font-weight:700!important;margin-bottom:6px;color:#0f172a;letter-spacing:-0.02em;">
-            为你的求职准备<span style="color:#334155;border-bottom:2px solid #d4d4d8;padding-bottom:2px;">添砖加瓦</span>
+            从<span style="color:#6366f1;">迷茫</span>到<span style="color:#6366f1;">清晰</span>，陪伴你的职业成长每一步
         </h1>
-        <p style="font-size:15px;color:#78716c;max-width:460px;margin:12px auto 0;line-height:1.7;">
-            专注求职这件事
+        <p style="font-size:15px;color:#78716c;max-width:520px;margin:12px auto 0;line-height:1.7;">
+            AI Career Copilot 帮你从探索方向开始，一步步走完求职全程。
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── 全流程指导 ──
+    # ── 三条路径引导 ──
     st.markdown("""
-    <div style="margin:0 auto 28px;max-width:720px;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px;">
-            <div style="text-align:center;flex:1;">
-                <div style="width:28px;height:28px;border-radius:50%;background:#f5f5f4;border:1px solid #d6d3d1;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#78716c;margin-bottom:6px;">1</div>
-                <div style="font-size:12px;font-weight:550;color:#1c1917;">分析 JD</div>
-                <div style="font-size:10px;color:#a8a29e;margin-top:1px;">拆解岗位要求</div>
-            </div>
-            <div style="color:#d6d3d1;font-size:12px;padding-top:8px;">→</div>
-            <div style="text-align:center;flex:1;">
-                <div style="width:28px;height:28px;border-radius:50%;background:#f5f5f4;border:1px solid #d6d3d1;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#78716c;margin-bottom:6px;">2</div>
-                <div style="font-size:12px;font-weight:550;color:#1c1917;">上传简历</div>
-                <div style="font-size:10px;color:#a8a29e;margin-top:1px;">文字或 PDF</div>
-            </div>
-            <div style="color:#d6d3d1;font-size:12px;padding-top:8px;">→</div>
-            <div style="text-align:center;flex:1;">
-                <div style="width:28px;height:28px;border-radius:50%;background:#f5f5f4;border:1px solid #d6d3d1;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#78716c;margin-bottom:6px;">3</div>
-                <div style="font-size:12px;font-weight:550;color:#1c1917;">差距分析</div>
-                <div style="font-size:10px;color:#a8a29e;margin-top:1px;">简历 vs JD</div>
-            </div>
-            <div style="color:#d6d3d1;font-size:12px;padding-top:8px;">→</div>
-            <div style="text-align:center;flex:1;">
-                <div style="width:28px;height:28px;border-radius:50%;background:#f5f5f4;border:1px solid #d6d3d1;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#78716c;margin-bottom:6px;">4</div>
-                <div style="font-size:12px;font-weight:550;color:#1c1917;">学习路线</div>
-                <div style="font-size:10px;color:#a8a29e;margin-top:1px;">制定准备计划</div>
-            </div>
-            <div style="color:#d6d3d1;font-size:12px;padding-top:8px;">→</div>
-            <div style="text-align:center;flex:1;">
-                <div style="width:28px;height:28px;border-radius:50%;background:#f5f5f4;border:1px solid #d6d3d1;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#78716c;margin-bottom:6px;">5</div>
-                <div style="font-size:12px;font-weight:550;color:#1c1917;">模拟面试</div>
-                <div style="font-size:10px;color:#a8a29e;margin-top:1px;">检验准备成果</div>
-            </div>
-        </div>
+    <div style="text-align:center;margin:0 0 12px;">
+        <span style="font-size:14px;font-weight:600;color:#475569;">选择你的起点</span>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── 四个圆形入口 ──
-    c1, c2, c3, c4 = st.columns(4)
+    p1, p2, p3 = st.columns(3)
+    with p1:
+        st.markdown("""
+        <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px 16px 20px;text-align:center;height:100%;">
+            <div style="font-size:36px;margin-bottom:8px;">🎯</div>
+            <div style="font-weight:650;font-size:16px;color:#1c1917;margin-bottom:4px;">我明确目标岗位</div>
+            <div style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">知道想做什么，需要分析 JD、优化简历、模拟面试</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("开始准备 →", key="path_A", use_container_width=True, type="primary"):
+            st.session_state.current_page = "jd"
+            st.rerun()
+
+    with p2:
+        st.markdown("""
+        <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px 16px 20px;text-align:center;height:100%;">
+            <div style="font-size:36px;margin-bottom:8px;">🔍</div>
+            <div style="font-weight:650;font-size:16px;color:#1c1917;margin-bottom:4px;">我大概有方向但不确定</div>
+            <div style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">知道大类（产品/运营/研发…），想了解具体岗位做什么、适不适合我</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("探索岗位 →", key="path_B", use_container_width=True):
+            st.session_state.current_page = "jd"
+            st.rerun()
+
+    with p3:
+        st.markdown("""
+        <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px 16px 20px;text-align:center;height:100%;">
+            <div style="font-size:36px;margin-bottom:8px;">🧭</div>
+            <div style="font-weight:650;font-size:16px;color:#1c1917;margin-bottom:4px;">我完全不知道适合什么</div>
+            <div style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">对各岗位一无所知，希望 AI 帮我从兴趣和专业出发推荐方向</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("探索方向 →", key="path_C", use_container_width=True):
+            st.session_state.current_page = "career_explore"
+            st.rerun()
+
+    st.divider()
+
+    # ── 功能入口（保留但缩小）──
+    st.markdown("""
+    <div style="text-align:center;margin:0 0 12px;">
+        <span style="font-size:13px;font-weight:550;color:#94a3b8;">或直接使用功能</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    c1, c2, c3, c4, c5 = st.columns(5)
     entries = [
-        ("📋", "JD 分析", "拆解岗位要求", "jd"),
-        ("📝", "简历优化", "STAR 改写建议", "resume"),
+        ("📋", "岗位认知", "分析JD · 岗位百科", "jd"),
+        ("📝", "简历优化", "STAR 改写 · 差距分析", "resume"),
         ("🗺️", "学习路线", "按周规划准备", "roadmap"),
         ("💬", "模拟面试", "6 轮动态追问", "interview"),
+        ("👤", "我的成长", "历史 · 趋势 · 推荐", "profile"),
     ]
-    for col, (icon, title, desc, page) in zip([c1, c2, c3, c4], entries):
+    for col, (icon, title, desc, page) in zip([c1, c2, c3, c4, c5], entries):
         with col:
             st.markdown(f"""
-            <div style="text-align:center;padding:16px 8px;">
-                <div style="
-                    width:64px;height:64px;border-radius:50%;
-                    background:#f5f5f4;border:1px dashed #d6d3d1;
-                    display:inline-flex;align-items:center;justify-content:center;
-                    font-size:26px;margin-bottom:10px;
-                    transition:border-color 0.2s;
-                ">{icon}</div>
-                <div style="font-weight:600;font-size:15px;color:#1c1917;margin-bottom:2px;">{title}</div>
-                <div style="font-size:12px;color:#a8a29e;margin-bottom:10px;">{desc}</div>
+            <div style="text-align:center;padding:12px 6px;">
+                <div style="font-weight:600;font-size:14px;color:#1c1917;margin-bottom:2px;">{icon} {title}</div>
+                <div style="font-size:11px;color:#a8a29e;margin-bottom:8px;">{desc}</div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button(f"{title} →", key=f"go_{page}", use_container_width=True):
+            if st.button(f"进入 →", key=f"go_{page}", use_container_width=True):
                 st.session_state.current_page = page
                 st.rerun()
 
 
 # ═══════════════════════════════════════════
-# ── 页面：JD 分析 ──
+# ── 页面：职业探索 ──
+# ═══════════════════════════════════════════
+elif st.session_state.current_page == "career_explore":
+    if st.button("← 首页", key="career_explore_home"):
+        st.session_state.current_page = "home"
+        st.rerun()
+    st.markdown("""
+    <div style="margin-bottom:20px;">
+        <h1>职业探索</h1>
+        <p style="color:#64748b;font-size:15px;margin-top:-4px;">
+            不知道适合什么岗位？回答几个问题，AI 帮你发现方向
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    from src.career_explorer import explore_career
+
+    # 初始化探索状态
+    if "explore_step" not in st.session_state:
+        st.session_state.explore_step = 0
+    if "explore_answers" not in st.session_state:
+        st.session_state.explore_answers = {}
+    if "explore_result" not in st.session_state:
+        st.session_state.explore_result = None
+
+    # 引导问题
+    QUESTIONS = [
+        ("major", "你的专业或擅长的学科是什么？",
+         ["计算机/软件", "数学/统计", "经管/商科", "人文/社科", "设计/艺术", "理工科（其他）", "医学/药学", "其他"]),
+        ("interest", "你对哪类工作内容更感兴趣？",
+         ["创造/设计产品", "分析数据/找规律", "与人沟通/协调资源", "写代码/技术实现", "内容创作/传播", "研究/策略思考", "不太确定"]),
+        ("style", "你更喜欢什么样的工作方式？",
+         ["独立深入思考", "团队协作讨论", "快节奏多变", "稳定有条理", "创造性自由发挥"]),
+    ]
+
+    if st.session_state.explore_result:
+        # 展示结果
+        st.markdown("### AI 推荐方向")
+        st.markdown(st.session_state.explore_result)
+
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🔄 重新探索", use_container_width=True):
+                st.session_state.explore_step = 0
+                st.session_state.explore_answers = {}
+                st.session_state.explore_result = None
+                st.rerun()
+        with c2:
+            if st.button("📋 去了解具体岗位 →", use_container_width=True, type="primary"):
+                st.session_state.current_page = "jd"
+                st.rerun()
+
+    elif st.session_state.explore_step < len(QUESTIONS):
+        idx = st.session_state.explore_step
+        key, question, options = QUESTIONS[idx]
+
+        st.markdown(f"""
+        <div style="text-align:center;padding:20px 0 12px;">
+            <span style="font-size:12px;color:#a8a29e;">问题 {idx+1}/{len(QUESTIONS)}</span>
+            <div style="font-size:18px;font-weight:600;color:#1c1917;margin-top:8px;">{question}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 选项按钮
+        cols = st.columns(2)
+        for i, opt in enumerate(options):
+            with cols[i % 2]:
+                if st.button(opt, key=f"explore_{key}_{i}", use_container_width=True):
+                    st.session_state.explore_answers[key] = opt
+                    st.session_state.explore_step += 1
+                    st.rerun()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("跳过 →", key=f"skip_{key}", use_container_width=True):
+            st.session_state.explore_answers[key] = "未指定"
+            st.session_state.explore_step += 1
+            st.rerun()
+
+    else:
+        # 所有问题回答完毕，调用 AI
+        with st.spinner("AI 正在分析你的职业方向…"):
+            result = explore_career(st.session_state.explore_answers)
+        st.session_state.explore_result = result
+        st.rerun()
+
+
+# ═══════════════════════════════════════════
+# ── 页面：岗位认知（JD 分析）──
 # ═══════════════════════════════════════════
 elif st.session_state.current_page == "jd":
     if st.button("← 首页", key="jd_home"):
@@ -720,7 +800,7 @@ elif st.session_state.current_page == "jd":
         st.rerun()
     st.markdown("""
     <div style="margin-bottom:20px;">
-        <h1>JD 智能分析</h1>
+        <h1>岗位认知</h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -733,19 +813,16 @@ elif st.session_state.current_page == "jd":
     if "jd_compare_slots" not in st.session_state:
         st.session_state.jd_compare_slots = ["", "", ""]
 
-    cm1, cm2 = st.columns(2)
-    with cm1:
-        if st.button("分析单份 JD", key="mode_single",
-                     type="primary" if st.session_state.jd_mode == "single" else "secondary",
-                     use_container_width=True):
-            st.session_state.jd_mode = "single"
-            st.rerun()
-    with cm2:
-        if st.button("横向对比多份 JD", key="mode_compare",
-                     type="primary" if st.session_state.jd_mode == "compare" else "secondary",
-                     use_container_width=True):
+    # 单份分析是默认模式，多 JD 对比作为进阶选项默认折叠
+    with st.expander("📊 横向对比多份 JD（进阶）", expanded=False):
+        if st.button("切换到多 JD 对比模式", key="switch_compare", use_container_width=True):
             st.session_state.jd_mode = "compare"
             st.rerun()
+        if st.session_state.jd_mode == "compare":
+            st.caption("当前模式：多 JD 横向对比")
+            if st.button("← 切回单份分析", key="switch_single", use_container_width=True):
+                st.session_state.jd_mode = "single"
+                st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -920,24 +997,34 @@ elif st.session_state.current_page == "resume":
         st.session_state.resume_target_clear_seed += 1
         st.rerun()
 
-    resume_text = st.text_area(
-        "简历内容",
-        value=st.session_state.get("user_resume", ""),
-        placeholder="把你的简历文字粘贴在这里…",
-        height=280, label_visibility="collapsed",
-        key=f"resume_box_{st.session_state.resume_clear_seed}",
+    # ── 上传 PDF 简历 ──
+    uploaded_file = st.file_uploader(
+        "上传简历 PDF", type=["pdf"], key="resume_pdf_upload",
     )
-    if resume_text.strip():
-        st.session_state.user_resume = resume_text
-        if "gap_result" in st.session_state:
-            st.session_state.gap_result = None
+    if uploaded_file is not None:
+        _parse_pdf(uploaded_file)
 
-    cr1, cr2 = st.columns([20, 1])
-    with cr2:
-        if resume_text.strip() and st.button("✕", key="clear_resume", help="清空简历", use_container_width=True):
-            st.session_state.user_resume = ""
-            st.session_state.resume_clear_seed += 1
-            st.rerun()
+    # 显示已提取的简历内容
+    resume_text = st.session_state.get("user_resume", "")
+    if resume_text.strip():
+        st.caption(f"已提取 {len(resume_text)} 字")
+        with st.expander("📝 查看/编辑提取内容", expanded=False):
+            edited = st.text_area(
+                "简历内容（可编辑）",
+                value=resume_text,
+                height=200, label_visibility="collapsed",
+                key="resume_edit",
+            )
+            if edited != resume_text:
+                st.session_state.user_resume = edited
+                if "gap_result" in st.session_state:
+                    st.session_state.gap_result = None
+
+        cr1, cr2 = st.columns([20, 1])
+        with cr2:
+            if st.button("✕", key="clear_resume", help="清除简历", use_container_width=True):
+                st.session_state.user_resume = ""
+                st.rerun()
 
     target_jd_text = st.text_area(
         "目标岗位（可选）",
@@ -1030,11 +1117,10 @@ elif st.session_state.current_page == "roadmap":
             st.rerun()
 
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin:16px 0 4px;">JD 分析摘要（选填）</div>', unsafe_allow_html=True)
-    st.caption("从 JD 分析页跳过来会自动填入，留空 AI 会根据岗位名直接生成")
     jd_summary = st.text_area(
         "JD 分析摘要",
         value=bridge_summary or st.session_state.get("roadmap_jd_input", ""),
-        placeholder="可以把 JD 分析结果粘贴过来，让学习路线更有针对性…",
+        placeholder="从 JD 分析页跳过来会自动填入，留空 AI 会根据岗位名直接生成",
         height=100,
         label_visibility="collapsed",
         key=f"roadmap_jd_{st.session_state.roadmap_jd_clear_seed}",
@@ -1089,7 +1175,7 @@ elif st.session_state.current_page == "interview":
     <div style="margin-bottom:24px;">
         <h1>AI 模拟面试</h1>
         <p style="color:#64748b;font-size:15px;margin-top:-4px;">
-            真实 PM 实习面试体验 —— 动态追问、多维度评估、详细反馈
+            真实面试体验 —— 动态追问、多维度评估、详细反馈
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -1127,7 +1213,7 @@ elif st.session_state.current_page == "interview":
                     font-size:30px;margin-bottom:16px;
                 ">💬</div>
                 <h2 style="font-weight:700;color:#0f172a;margin-bottom:4px;">{role}</h2>
-                <p style="font-size:14px;color:#a8a29e;">{cat} · 实习面试模拟</p>
+                <p style="font-size:14px;color:#a8a29e;">{cat} · 面试模拟</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1162,9 +1248,29 @@ elif st.session_state.current_page == "interview":
                 """, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
+
+            # ── 岗位百科入口 ──
+            from src.role_encyclopedia import describe_role
+            if "role_detail_shown" not in st.session_state:
+                st.session_state.role_detail_shown = False
+            if "role_detail_text" not in st.session_state:
+                st.session_state.role_detail_text = None
+
+            if st.button(f"📖 查看「{role}」岗位详情", key="show_role_detail", use_container_width=True):
+                with st.spinner("正在生成岗位介绍…"):
+                    st.session_state.role_detail_text = describe_role(role)
+                st.session_state.role_detail_shown = True
+                st.rerun()
+
+            if st.session_state.role_detail_shown and st.session_state.role_detail_text:
+                st.markdown(st.session_state.role_detail_text)
+                st.divider()
+
             c_btn1, c_btn2, c_btn3 = st.columns([1, 2, 1])
             with c_btn2:
                 if st.button("开始面试", key="confirm_start", use_container_width=True, type="primary"):
+                    st.session_state.role_detail_shown = False
+                    st.session_state.role_detail_text = None
                     start_interview(role, jd_context=jd_context)
                     st.session_state.interview_confirm_mode = False
                     st.session_state.interview_selected_role = None
@@ -1172,32 +1278,6 @@ elif st.session_state.current_page == "interview":
                     st.rerun()
 
         else:
-            # ── 面试进步追踪（有历史记录时显示）──
-            scores = get_score_trend()
-            if len(scores) >= 1:
-                with st.expander("📈 面试进步追踪", expanded=len(scores) >= 2):
-                    # 趋势图
-                    if len(scores) >= 2:
-                        import pandas as pd
-                        df = pd.DataFrame(scores)
-                        df["label"] = df.apply(lambda r: f"#{r['index']} {r['role']}", axis=1)
-                        st.line_chart(df.set_index("label")["score"], use_container_width=True, height=200)
-
-                    # 历史列表
-                    st.markdown('<div style="font-size:11px;color:#a8a29e;margin:8px 0 4px;">面试历史</div>', unsafe_allow_html=True)
-                    for s in reversed(scores[-8:]):  # 最近 8 次
-                        color = "#1c1917" if s["score"] is not None and s["score"] >= 6 else "#dc2626"
-                        score_str = str(s["score"]) if s["score"] is not None else "—"
-                        st.markdown(f"""
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f5f5f4;">
-                            <span style="color:#1c1917;">#{s['index']} {s['role']}</span>
-                            <span style="display:flex;gap:16px;">
-                                <span style="color:#a8a29e;">{s['date']}</span>
-                                <span style="font-weight:600;color:{color};">{score_str}/10</span>
-                            </span>
-                        </div>
-                        """, unsafe_allow_html=True)
-
             # ── 标题 ──
             st.markdown("""
             <div style="text-align:center;margin-bottom:20px;">
@@ -1414,7 +1494,7 @@ elif st.session_state.current_page == "interview":
 
         # 评估报告
         st.divider()
-        st.markdown("## 📊 面试评估报告")
+        st.markdown("## 面试评估报告")
         st.markdown(f'<div class="glass-card">{st.session_state.interview_evaluation}</div>', unsafe_allow_html=True)
 
         # 底部操作
@@ -1446,7 +1526,7 @@ elif st.session_state.current_page == "profile":
         st.rerun()
     st.markdown("""
     <div style="margin-bottom:24px;">
-        <h1>我的</h1>
+        <h1>我的成长</h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1454,7 +1534,7 @@ elif st.session_state.current_page == "profile":
     iv_hist = get_interview_history()
 
     # ── 历史分析记录 ──
-    st.markdown("### 📋 历史分析")
+    st.markdown("### 历史分析")
     if jd_hist:
         for i, item in enumerate(jd_hist):
             with st.expander(f"{item['role']} · {item['date']}", expanded=(i == 0)):
@@ -1468,7 +1548,7 @@ elif st.session_state.current_page == "profile":
     st.divider()
 
     # ── 面试记录 ──
-    st.markdown("### 🎯 面试记录")
+    st.markdown("### 面试记录")
     if iv_hist:
         # 趋势图
         scores_valid = [h for h in iv_hist if h.get("score") is not None]
@@ -1505,11 +1585,53 @@ elif st.session_state.current_page == "profile":
     else:
         st.markdown('<div style="color:#a8a29e;font-size:14px;padding:24px 0;text-align:center;">暂无面试记录<br><span style="font-size:12px;">完成一次模拟面试后会自动记录下来</span></div>', unsafe_allow_html=True)
 
+    # ── 下一步推荐 ──
+    if jd_hist or iv_hist:
+        st.divider()
+        st.markdown("### 下一步推荐")
+
+        if "next_step_result" not in st.session_state:
+            st.session_state.next_step_result = None
+
+        if st.session_state.next_step_result is None:
+            if st.button("AI 分析我的成长建议", type="primary", use_container_width=True):
+                from src.api_client import chat
+                from src.prompts import NEXT_STEP_RECOMMEND_SYSTEM, NEXT_STEP_RECOMMEND_USER
+                scores = [h.get("score") for h in iv_hist if h.get("score") is not None]
+                if len(scores) >= 2:
+                    trend = "上升" if scores[-1] > scores[0] else ("下降" if scores[-1] < scores[0] else "持平")
+                    score_trend = f"最近{len(scores)}次面试评分：{' → '.join(str(s) for s in scores)}，趋势：{trend}"
+                elif len(scores) == 1:
+                    score_trend = f"仅有1次面试，评分{scores[0]}/10"
+                else:
+                    score_trend = "暂无面试记录"
+                prompt = NEXT_STEP_RECOMMEND_USER.format(
+                    jd_count=len(jd_hist),
+                    resume_count=len([1 for item in jd_hist if item.get("result")]) + 0,
+                    roadmap_count=0,
+                    interview_count=len(iv_hist),
+                    score_trend=score_trend,
+                )
+                with st.spinner("AI 正在分析你的成长路径…"):
+                    result = chat([
+                        {"role": "system", "content": NEXT_STEP_RECOMMEND_SYSTEM},
+                        {"role": "user", "content": prompt},
+                    ], temperature=0.7, max_tokens=1024)
+                st.session_state.next_step_result = result
+                st.rerun()
+
+        if st.session_state.next_step_result:
+            st.markdown(st.session_state.next_step_result)
+            if st.button("🔄 刷新建议", key="refresh_next_step", use_container_width=True):
+                st.session_state.next_step_result = None
+                st.rerun()
+
     # ── 清除数据 ──
     st.divider()
     with st.expander("⚙️ 数据管理", expanded=False):
         st.caption("所有数据存储在你本地浏览器和文件中，不会被上传。")
         if st.button("清除全部记录", type="secondary", use_container_width=True):
+            st.session_state.next_step_result = None
             clear_all_history()
             st.rerun()
 
@@ -1518,6 +1640,6 @@ elif st.session_state.current_page == "profile":
 # ═══════════════════════════════════════════
 st.markdown("""
 <div class="footer-bar">
-    JobCoach v2.1 · AI 求职助手
+    AI Career Copilot v3.0 · AI 职业成长助手
 </div>
 """, unsafe_allow_html=True)

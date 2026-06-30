@@ -16,6 +16,7 @@ from src.prompts import (
     INTERVIEW_EVALUATION,
     INTERVIEW_MAX_ROUNDS,
     INTERVIEW_ROLES,
+    DIMENSION_MAP,
 )
 
 
@@ -50,6 +51,11 @@ def start_interview(role_name: str, jd_context: str = ""):
     st.session_state.interview_evaluation = None
     st.session_state.interview_role = role_name
     st.session_state.waiting_for_answer = True
+
+    # 确定岗位类别和对应评估维度
+    role_category = INTERVIEW_ROLES.get(role_name, "")
+    role_dimension = DIMENSION_MAP.get(role_category, "专业基础")
+    st.session_state._role_dimension = role_dimension
 
     # JD 上下文格式化
     if jd_context.strip():
@@ -129,6 +135,7 @@ def _generate_next_question(history: list, last_question: str, last_answer: str)
     history_text = _format_history(history[:-1])  # 不包含最后一轮
 
     prompt = INTERVIEW_NEXT_QUESTION.format(
+        role=st.session_state.interview_role,
         history=history_text,
         last_question=last_question,
         last_answer=last_answer,
@@ -175,7 +182,11 @@ def _generate_evaluation() -> str:
 
     evaluation = chat([
         {"role": "system", "content": st.session_state.get("_system_prompt", INTERVIEWER_SYSTEM.format(role=st.session_state.interview_role, jd_context=""))},
-        {"role": "user", "content": INTERVIEW_EVALUATION.format(full_history=full_context)},
+        {"role": "user", "content": INTERVIEW_EVALUATION.format(
+            role=st.session_state.interview_role,
+            role_dimension=st.session_state.get("_role_dimension", "专业基础"),
+            full_history=full_context,
+        )},
     ], temperature=0.6, max_tokens=3072)
 
     return evaluation
