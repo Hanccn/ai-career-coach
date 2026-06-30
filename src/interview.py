@@ -135,7 +135,7 @@ def _generate_next_question(history: list, last_question: str, last_answer: str)
     )
 
     response = chat([
-        {"role": "system", "content": st.session_state.get("_system_prompt", INTERVIEWER_SYSTEM.format(role=st.session_state.interview_role))},
+        {"role": "system", "content": st.session_state.get("_system_prompt", INTERVIEWER_SYSTEM.format(role=st.session_state.interview_role, jd_context=""))},
         {"role": "user", "content": prompt},
     ], temperature=0.85, max_tokens=1024)
 
@@ -174,7 +174,7 @@ def _generate_evaluation() -> str:
 {assessments_text}"""
 
     evaluation = chat([
-        {"role": "system", "content": st.session_state.get("_system_prompt", INTERVIEWER_SYSTEM.format(role=st.session_state.interview_role))},
+        {"role": "system", "content": st.session_state.get("_system_prompt", INTERVIEWER_SYSTEM.format(role=st.session_state.interview_role, jd_context=""))},
         {"role": "user", "content": INTERVIEW_EVALUATION.format(full_history=full_context)},
     ], temperature=0.6, max_tokens=3072)
 

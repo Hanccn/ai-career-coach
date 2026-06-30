@@ -952,6 +952,7 @@ elif st.session_state.current_page == "resume":
     ct1, ct2 = st.columns([20, 1])
     with ct2:
         if target_jd_text.strip() and st.button("✕", key="clear_target_jd", help="清空目标岗位", use_container_width=True):
+            st.session_state.resume_target_jd = ""
             st.session_state.resume_target_clear_seed += 1
             st.rerun()
 
