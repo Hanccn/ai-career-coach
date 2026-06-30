@@ -19,3 +19,4 @@ venv/
 # 任务记录
 *.md
 !README.md
+usage_history.json
