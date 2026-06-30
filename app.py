@@ -365,21 +365,29 @@ with st.sidebar:
 # 工具函数
 # ═══════════════════════════════════════════
 def _guess_role(result: str, jd_text: str) -> str:
-    """从 JD 分析和原始文本中猜测岗位名称"""
+    """从 JD 分析和原始文本中猜测岗位名称——JD 标题优先，AI 分析辅助"""
+    jd_lower = jd_text[:500].lower()  # JD 前半段通常有岗位名
     combined = (result + jd_text).lower()
+
+    # 优先从 JD 原文标题匹配（不依赖 AI 结果）
     keywords = {
-        "AI产品经理": ["ai产品", "大模型", "人工智能产品", "ai native"],
-        "产品经理（通用）": ["产品经理", "产品实习", "产品需求", "prd", "需求分析"],
-        "数据分析师": ["数据分析", "数据产品", "数据运营", "sql", "bi"],
-        "前端开发工程师": ["前端", "react", "vue", "web前端", "h5"],
-        "后端开发工程师": ["后端", "java", "python开发", "服务端", "后端开发"],
-        "算法工程师": ["算法", "机器学习", "深度学习", "nlp", "cv"],
-        "用户运营": ["用户运营", "用户增长", "社群运营", "用户活跃"],
-        "UI/UX设计师": ["ui设计", "ux", "交互设计", "视觉设计", "figma"],
-        "HR（招聘方向）": ["hr", "人力资源", "招聘", "员工关系", "入职", "hrbp"],
+        "HR（招聘方向）": ["hr实习", "人力资源", "hrbp", "招聘专员", "员工关系"],
+        "AI产品经理": ["ai产品", "大模型", "ai native", "人工智能产品经理"],
+        "UI/UX设计师": ["ui设计", "ux设计", "交互设计", "视觉设计"],
+        "算法工程师": ["算法工程师", "机器学习工程师", "深度学习", "nlp工程师"],
+        "前端开发工程师": ["前端开发", "web前端", "前端工程师"],
+        "后端开发工程师": ["后端开发", "服务端", "后端工程师", "java开发"],
+        "数据分析师": ["数据分析师", "数据产品经理", "bi工程师"],
+        "产品经理（通用）": ["产品经理", "产品实习", "产品需求", "prd"],
+        "用户运营": ["用户运营", "用户增长", "社群运营"],
     }
+    # 先看 JD 标题
     for role, keys in keywords.items():
-        if any(k in combined for k in keys):
+        if any(k in jd_lower for k in keys):
+            return role
+    # 再看 AI 分析结果
+    for role, keys in keywords.items():
+        if any(k in result.lower() for k in keys):
             return role
     return "产品经理（通用）"
 
@@ -749,13 +757,21 @@ elif st.session_state.current_page == "jd":
         if st.session_state.jd_last_result is None:
             st.markdown("")
 
+        if "jd_clear_seed" not in st.session_state:
+            st.session_state.jd_clear_seed = 0
+
+        # 填入示例用 pending 机制
+        pending = st.session_state.pop("_jd_pending", "") or st.session_state.get("jd_last_input", "")
         jd_text = st.text_area(
             "粘贴岗位 JD",
             placeholder="从招聘网站直接复制粘贴，支持任意格式…",
             height=240,
             label_visibility="collapsed",
-            value=st.session_state.jd_last_input,
+            key=f"jd_box_{st.session_state.jd_clear_seed}",
+            value=pending,
         )
+        if jd_text.strip():
+            st.session_state.jd_last_input = jd_text
 
         EXAMPLE_JD = """【岗位名称】HR实习生
 【工作职责】
@@ -770,11 +786,17 @@ elif st.session_state.current_page == "jd":
 4. 优秀的沟通表达和亲和力，做事细致有条理
 5. 有HR实习经验或校园招聘经历优先"""
 
-        st.caption(f"{len(jd_text)} 字")
+        c_ct, c_cl = st.columns([20, 1])
+        with c_ct: st.caption(f"{len(jd_text)} 字")
+        with c_cl:
+            if jd_text.strip() and st.button("✕", key="clear_jd", help="清空输入", use_container_width=True):
+                st.session_state.jd_clear_seed += 1
+                st.rerun()
         btn_c1, btn_c2 = st.columns([1, 1])
         with btn_c1:
             if st.button("填入示例", key="fill_example_jd", use_container_width=True):
-                st.session_state.jd_last_input = EXAMPLE_JD
+                st.session_state._jd_pending = EXAMPLE_JD
+                st.session_state.jd_clear_seed += 1
                 st.rerun()
         with btn_c2:
             analyze_btn = st.button(
@@ -887,28 +909,48 @@ elif st.session_state.current_page == "resume":
 
     # 从 JD 分析页跳过来时，自动填入最后分析的 JD
     bridge_jd = st.session_state.get("jd_last_input", "")
+
+    # 清除后重建 widget 的种子
+    if "resume_clear_seed" not in st.session_state:
+        st.session_state.resume_clear_seed = 0
+    if "resume_target_clear_seed" not in st.session_state:
+        st.session_state.resume_target_clear_seed = 0
+
     resume_text = st.text_area(
         "简历内容",
-        value=st.session_state.get("user_resume", ""),
-        placeholder="把你的简历文字粘贴在这里…\n\n例如：\n教育背景\nXX大学 计算机科学与技术 2023-2027\n\n实习经历\nXX公司 产品实习生 2025.6-2025.9\n- 参与了XX产品的迭代\n- 写了PRD文档\n\n项目经历\n…",
-        height=280, key="resume_input", label_visibility="collapsed",
+        placeholder="把你的简历文字粘贴在这里…",
+        height=280, label_visibility="collapsed",
+        key=f"resume_box_{st.session_state.resume_clear_seed}",
     )
-    # 保存简历到全局 session state
     if resume_text.strip():
         st.session_state.user_resume = resume_text
-        # 简历变了，之前的差距分析结果作废
         if "gap_result" in st.session_state:
             st.session_state.gap_result = None
 
-    target_jd = st.text_area(
-        "目标岗位（可选）",
-        value=bridge_jd or "",
-        placeholder="留空也可以，AI 会针对简历本身给出优化建议。\n想看到匹配度分析的话，就把目标 JD 也贴进来。",
-        height=160, key="target_jd_input", label_visibility="collapsed",
-    )
+    cr1, cr2 = st.columns([20, 1])
+    with cr2:
+        if resume_text.strip() and st.button("✕", key="clear_resume", help="清空简历", use_container_width=True):
+            st.session_state.user_resume = ""
+            st.session_state.resume_clear_seed += 1
+            st.rerun()
 
-    if bridge_jd and not target_jd:
+    target_jd_text = st.text_area(
+        "目标岗位（可选）",
+        placeholder="留空也可以，AI 会针对简历本身给出优化建议。\n想看到匹配度分析的话，就把目标 JD 也贴进来。",
+        height=160, label_visibility="collapsed",
+        key=f"resume_target_box_{st.session_state.resume_target_clear_seed}",
+    )
+    if bridge_jd and not target_jd_text:
         st.caption("已自动填入刚才分析的 JD")
+    if target_jd_text.strip():
+        st.session_state.resume_target_jd = target_jd_text
+
+    ct1, ct2 = st.columns([20, 1])
+    with ct2:
+        if target_jd_text.strip() and st.button("✕", key="clear_target_jd", help="清空目标岗位", use_container_width=True):
+            st.session_state.resume_target_jd = ""
+            st.session_state.resume_target_clear_seed += 1
+            st.rerun()
 
     optimize_btn = st.button(
         "优化我的简历", type="primary", use_container_width=True,
@@ -917,7 +959,7 @@ elif st.session_state.current_page == "resume":
 
     if optimize_btn and resume_text.strip():
         with st.spinner("正在分析…"):
-            result = optimize_resume(resume_text, target_jd)
+            result = optimize_resume(resume_text, target_jd_text)
         record_resume_optimization()
 
         st.divider()
@@ -957,26 +999,37 @@ elif st.session_state.current_page == "roadmap":
     bridge_summary = st.session_state.pop("_roadmap_summary", "")
 
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin-bottom:4px;">目标岗位</div>', unsafe_allow_html=True)
-    role = st.text_input(
-        "目标岗位",
-        value=bridge_role if bridge_role else st.session_state.get("roadmap_role_input", ""),
-        placeholder="输入你想准备的岗位，如：AI产品经理、前端开发…",
-        key="roadmap_role_input_field",
-        label_visibility="collapsed",
-    )
+    rr1, rr2 = st.columns([20, 1])
+    role_saved = st.session_state.get("roadmap_role_input", "")
+    with rr1:
+        role = st.text_input(
+            "目标岗位",
+            value=bridge_role if bridge_role else role_saved,
+            placeholder="输入你想准备的岗位，如：AI产品经理、前端开发…",
+            label_visibility="collapsed",
+        )
     st.session_state.roadmap_role_input = role
+    with rr2:
+        if role.strip() and st.button("✕", key="clear_roadmap_role", help="清空岗位", use_container_width=True):
+            st.session_state.roadmap_role_input = ""
+            st.rerun()
 
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin:16px 0 4px;">JD 分析摘要（选填）</div>', unsafe_allow_html=True)
     st.caption("从 JD 分析页跳过来会自动填入，留空 AI 会根据岗位名直接生成")
+    jd_saved = st.session_state.get("roadmap_jd_input", "")
     jd_summary = st.text_area(
         "JD 分析摘要",
-        value=bridge_summary if bridge_summary else st.session_state.get("roadmap_jd_input", ""),
+        value=bridge_summary if bridge_summary else jd_saved,
         placeholder="可以把 JD 分析结果粘贴过来，让学习路线更有针对性…",
         height=100,
-        key="roadmap_jd",
         label_visibility="collapsed",
     )
     st.session_state.roadmap_jd_input = jd_summary
+    rs1, rs2 = st.columns([20, 1])
+    with rs2:
+        if jd_summary.strip() and st.button("✕", key="clear_roadmap_jd", help="清空摘要", use_container_width=True):
+            st.session_state.roadmap_jd_input = ""
+            st.rerun()
 
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin:16px 0 4px;">学习周期</div>', unsafe_allow_html=True)
     weeks = st.selectbox("学习周期", [2, 3, 4, 6, 8], index=1, label_visibility="collapsed",
@@ -1277,28 +1330,38 @@ elif st.session_state.current_page == "interview":
                 </div>
                 """, unsafe_allow_html=True)
 
-        # 输入区
+        # 输入区（表单模式——Enter 直接提交）
         st.markdown("<br>", unsafe_allow_html=True)
-        answer = st.text_area(
-            "输入你的回答",
-            placeholder="像在真实面试中那样回答。小提示：用具体的例子支撑观点会更打动面试官。",
-            height=110, key=f"answer_{current_round}",
-            label_visibility="collapsed",
-        )
+        with st.form(key=f"answer_form_{current_round}", clear_on_submit=True):
+            answer = st.text_area(
+                "输入你的回答",
+                placeholder="像在真实面试中那样回答… Shift+Enter 换行，Enter 直接提交",
+                height=110,
+                label_visibility="collapsed",
+            )
 
-        c1, c2, c3 = st.columns([2.5, 1, 1])
-        with c1:
-            label = "📤 提交并查看评估" if current_round >= INTERVIEW_MAX_ROUNDS else "📤 提交回答"
-            if st.button(label, type="primary", use_container_width=True, key=f"submit_{current_round}"):
-                if not answer.strip():
-                    st.warning("请输入你的回答")
-                else:
-                    submit_answer(answer)
-        with c2:
+            fc1, fc2, fc3 = st.columns([2.5, 1, 1])
+            with fc1:
+                label = "📤 提交并查看评估" if current_round >= INTERVIEW_MAX_ROUNDS else "📤 提交回答（Enter）"
+                submitted = st.form_submit_button(label, type="primary", use_container_width=True)
+            with fc2:
+                pass
+            with fc3:
+                pass
+
+        if submitted:
+            if not answer.strip():
+                st.warning("请输入你的回答")
+            else:
+                submit_answer(answer)
+
+        # 提前结束放在 form 外面
+        _, ec, _ = st.columns([2.5, 1, 1])
+        with ec:
             if st.button("🛑 提前结束", use_container_width=True, key="end_early",
                          help="基于已有对话生成评估报告"):
                 st.session_state.interview_history.append(
-                    {"role": "user", "content": answer if answer.strip() else "(提前结束面试)"}
+                    {"role": "user", "content": "(提前结束面试)"}
                 )
                 with st.spinner("正在生成评估报告…"):
                     from src.interview import _generate_evaluation
