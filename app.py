@@ -790,6 +790,7 @@ elif st.session_state.current_page == "jd":
         with c_ct: st.caption(f"{len(jd_text)} 字")
         with c_cl:
             if jd_text.strip() and st.button("✕", key="clear_jd", help="清空输入", use_container_width=True):
+                st.session_state.jd_last_input = ""
                 st.session_state.jd_clear_seed += 1
                 st.rerun()
         btn_c1, btn_c2 = st.columns([1, 1])
@@ -994,41 +995,45 @@ elif st.session_state.current_page == "roadmap":
     if "roadmap_result" not in st.session_state:
         st.session_state.roadmap_result = None
 
-    # JD 桥接（从 JD 分析页跳过来时自动填入）或手动输入
+    # JD 桥接 + 清除种子
     bridge_role = st.session_state.pop("_roadmap_role", "")
     bridge_summary = st.session_state.pop("_roadmap_summary", "")
+    if "roadmap_clear_seed" not in st.session_state:
+        st.session_state.roadmap_clear_seed = 0
+    if "roadmap_jd_clear_seed" not in st.session_state:
+        st.session_state.roadmap_jd_clear_seed = 0
 
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin-bottom:4px;">目标岗位</div>', unsafe_allow_html=True)
     rr1, rr2 = st.columns([20, 1])
-    role_saved = st.session_state.get("roadmap_role_input", "")
     with rr1:
         role = st.text_input(
             "目标岗位",
-            value=bridge_role if bridge_role else role_saved,
             placeholder="输入你想准备的岗位，如：AI产品经理、前端开发…",
             label_visibility="collapsed",
+            key=f"roadmap_role_{st.session_state.roadmap_clear_seed}",
         )
     st.session_state.roadmap_role_input = role
     with rr2:
         if role.strip() and st.button("✕", key="clear_roadmap_role", help="清空岗位", use_container_width=True):
             st.session_state.roadmap_role_input = ""
+            st.session_state.roadmap_clear_seed += 1
             st.rerun()
 
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin:16px 0 4px;">JD 分析摘要（选填）</div>', unsafe_allow_html=True)
     st.caption("从 JD 分析页跳过来会自动填入，留空 AI 会根据岗位名直接生成")
-    jd_saved = st.session_state.get("roadmap_jd_input", "")
     jd_summary = st.text_area(
         "JD 分析摘要",
-        value=bridge_summary if bridge_summary else jd_saved,
         placeholder="可以把 JD 分析结果粘贴过来，让学习路线更有针对性…",
         height=100,
         label_visibility="collapsed",
+        key=f"roadmap_jd_{st.session_state.roadmap_jd_clear_seed}",
     )
     st.session_state.roadmap_jd_input = jd_summary
     rs1, rs2 = st.columns([20, 1])
     with rs2:
         if jd_summary.strip() and st.button("✕", key="clear_roadmap_jd", help="清空摘要", use_container_width=True):
             st.session_state.roadmap_jd_input = ""
+            st.session_state.roadmap_jd_clear_seed += 1
             st.rerun()
 
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin:16px 0 4px;">学习周期</div>', unsafe_allow_html=True)
