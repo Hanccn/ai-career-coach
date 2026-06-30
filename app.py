@@ -367,7 +367,6 @@ with st.sidebar:
 def _guess_role(result: str, jd_text: str) -> str:
     """从 JD 分析和原始文本中猜测岗位名称——JD 标题优先，AI 分析辅助"""
     jd_lower = jd_text[:500].lower()  # JD 前半段通常有岗位名
-    combined = (result + jd_text).lower()
 
     # 优先从 JD 原文标题匹配（不依赖 AI 结果）
     keywords = {
@@ -919,6 +918,7 @@ elif st.session_state.current_page == "resume":
 
     resume_text = st.text_area(
         "简历内容",
+        value=st.session_state.get("user_resume", ""),
         placeholder="把你的简历文字粘贴在这里…",
         height=280, label_visibility="collapsed",
         key=f"resume_box_{st.session_state.resume_clear_seed}",
@@ -1003,11 +1003,18 @@ elif st.session_state.current_page == "roadmap":
     if "roadmap_jd_clear_seed" not in st.session_state:
         st.session_state.roadmap_jd_clear_seed = 0
 
+    # 桥接时触发种子更新
+    if bridge_role:
+        st.session_state.roadmap_clear_seed += 1
+    if bridge_summary:
+        st.session_state.roadmap_jd_clear_seed += 1
+
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin-bottom:4px;">目标岗位</div>', unsafe_allow_html=True)
     rr1, rr2 = st.columns([20, 1])
     with rr1:
         role = st.text_input(
             "目标岗位",
+            value=bridge_role or st.session_state.get("roadmap_role_input", ""),
             placeholder="输入你想准备的岗位，如：AI产品经理、前端开发…",
             label_visibility="collapsed",
             key=f"roadmap_role_{st.session_state.roadmap_clear_seed}",
@@ -1023,6 +1030,7 @@ elif st.session_state.current_page == "roadmap":
     st.caption("从 JD 分析页跳过来会自动填入，留空 AI 会根据岗位名直接生成")
     jd_summary = st.text_area(
         "JD 分析摘要",
+        value=bridge_summary or st.session_state.get("roadmap_jd_input", ""),
         placeholder="可以把 JD 分析结果粘贴过来，让学习路线更有针对性…",
         height=100,
         label_visibility="collapsed",
