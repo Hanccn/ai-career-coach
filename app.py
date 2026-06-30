@@ -910,11 +910,15 @@ elif st.session_state.current_page == "resume":
     # 从 JD 分析页跳过来时，自动填入最后分析的 JD
     bridge_jd = st.session_state.get("jd_last_input", "")
 
-    # 清除后重建 widget 的种子
-    if "resume_clear_seed" not in st.session_state:
-        st.session_state.resume_clear_seed = 0
-    if "resume_target_clear_seed" not in st.session_state:
-        st.session_state.resume_target_clear_seed = 0
+    for _seed_key in ("resume_clear_seed", "resume_target_clear_seed"):
+        if _seed_key not in st.session_state:
+            st.session_state[_seed_key] = 0
+
+    # 桥接 JD —— 触发种子更新让 value 生效（只触发一次）
+    if bridge_jd and st.session_state.get("_resume_bridge_pending", True):
+        st.session_state._resume_bridge_pending = False
+        st.session_state.resume_target_clear_seed += 1
+        st.rerun()
 
     resume_text = st.text_area(
         "简历内容",
@@ -937,19 +941,17 @@ elif st.session_state.current_page == "resume":
 
     target_jd_text = st.text_area(
         "目标岗位（可选）",
-        placeholder="留空也可以，AI 会针对简历本身给出优化建议。\n想看到匹配度分析的话，就把目标 JD 也贴进来。",
+        value=st.session_state.get("resume_target_jd", bridge_jd or ""),
+        placeholder="留空也可以，AI会针对简历本身给出优化建议。想看到匹配度分析的话把目标JD也贴进来。",
         height=160, label_visibility="collapsed",
         key=f"resume_target_box_{st.session_state.resume_target_clear_seed}",
     )
-    if bridge_jd and not target_jd_text:
-        st.caption("已自动填入刚才分析的 JD")
     if target_jd_text.strip():
         st.session_state.resume_target_jd = target_jd_text
 
     ct1, ct2 = st.columns([20, 1])
     with ct2:
         if target_jd_text.strip() and st.button("✕", key="clear_target_jd", help="清空目标岗位", use_container_width=True):
-            st.session_state.resume_target_jd = ""
             st.session_state.resume_target_clear_seed += 1
             st.rerun()
 
