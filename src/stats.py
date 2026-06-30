@@ -61,34 +61,18 @@ def init_stats_state():
 
 
 # ── 记录函数 ──
-def record_jd_analysis():
+def record_jd_analysis(role=""):
     st.session_state.total_jd_analyses += 1
     hist = _load_history()
     jd_text = st.session_state.get("jd_last_input", "")
     result = st.session_state.get("jd_last_result", "")
-    guessed = st.session_state.get("_last_guessed_role", "")
-    if not guessed:
-        combined = (result + jd_text).lower()
-        kw_map = {
-            "AI产品经理": ["ai产品", "大模型", "人工智能产品"],
-            "产品经理（通用）": ["产品经理", "产品实习", "prd", "需求分析"],
-            "数据分析师": ["数据分析", "数据产品", "数据运营", "sql", "bi"],
-            "前端开发工程师": ["前端", "react", "vue", "web前端"],
-            "后端开发工程师": ["后端", "java", "python开发", "服务端"],
-            "算法工程师": ["算法", "机器学习", "深度学习", "nlp", "cv"],
-            "用户运营": ["用户运营", "用户增长", "社群运营"],
-            "UI/UX设计师": ["ui设计", "ux", "交互设计", "视觉设计", "figma"],
-        }
-        for role, keys in kw_map.items():
-            if any(k in combined for k in keys):
-                guessed = role
-                break
-        if not guessed:
-            guessed = "产品经理（通用）"
+
+    if not role:
+        role = "未识别"
 
     hist.setdefault("jd_analyses", []).append({
         "date": datetime.now().strftime("%m/%d %H:%M"),
-        "role": guessed,
+        "role": role,
         "jd_snippet": jd_text[:200],
         "jd_full": jd_text[:3000],
         "result": result[:3000],

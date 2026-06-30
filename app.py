@@ -376,6 +376,7 @@ def _guess_role(result: str, jd_text: str) -> str:
         "算法工程师": ["算法", "机器学习", "深度学习", "nlp", "cv"],
         "用户运营": ["用户运营", "用户增长", "社群运营", "用户活跃"],
         "UI/UX设计师": ["ui设计", "ux", "交互设计", "视觉设计", "figma"],
+        "HR（招聘方向）": ["hr", "人力资源", "招聘", "员工关系", "入职", "hrbp"],
     }
     for role, keys in keywords.items():
         if any(k in combined for k in keys):
@@ -787,7 +788,7 @@ elif st.session_state.current_page == "jd":
 
             st.session_state.jd_last_result = result
             st.session_state.jd_last_input = jd_text
-            record_jd_analysis()
+            record_jd_analysis(_guess_role(result, jd_text))
             st.session_state.gap_result = None
             st.session_state.gap_running = False
             _show_single_result(result, jd_text)
