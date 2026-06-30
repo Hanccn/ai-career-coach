@@ -10,8 +10,9 @@ import streamlit as st
 import sys, os
 from dotenv import load_dotenv
 
-load_dotenv()
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+sys.path.insert(0, BASE_DIR)
 
 from src.api_client import DEEPSEEK_API_KEY
 from src.jd_analyzer import analyze_jd, compare_jds, analyze_gap
@@ -24,7 +25,9 @@ from src.prompts import ROLE_DATABASE
 from src.roadmap import generate_roadmap
 from src.stats import (
     init_stats_state, record_jd_analysis, record_resume_optimization,
-    record_roadmap, record_interview, get_score_trend, get_latest_score, get_score_delta,
+    record_roadmap, record_interview, record_jd_compare,
+    get_score_trend, get_latest_score, get_score_delta,
+    get_jd_history, get_interview_history, clear_all_history,
 )
 
 # ═══════════════════════════════════════════
@@ -299,12 +302,19 @@ hr {
 }
 
 /* ── 隐藏 Streamlit 默认元素 ── */
-#MainMenu, footer, header { visibility: hidden; }
+#MainMenu, footer { visibility: hidden; }
 [data-testid="stDecoration"] { display: none; }
 /* 去掉 text_input / text_area 的 "Press Enter to apply/reply" */
 small { display: none !important; }
 [data-baseweb="input"] + div { display: none !important; }
 </style>
+""", unsafe_allow_html=True)
+
+# ── 强制清楚侧边栏折叠状态 ──
+st.markdown("""
+<script>
+localStorage.removeItem("stSidebarState");
+</script>
 """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════
@@ -338,6 +348,7 @@ with st.sidebar:
         ("✂️", "简历优化", "resume"),
         ("🗺️", "学习路线", "roadmap"),
         ("💬", "AI 模拟面试", "interview"),
+        ("👤", "我的", "profile"),
     ]
 
     for emoji, label, key in nav_items:
@@ -348,24 +359,6 @@ with st.sidebar:
             st.session_state.current_page = key
             st.rerun()
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("💡 关于 & 迭代日志"):
-        st.markdown("**JobCoach v2.1** · Streamlit + DeepSeek · PM 实习作品")
-        st.markdown("---")
-        changelog_sidebar = [
-            ("v2.1", "2026.06.29", ["JD 单份/多份横向对比，PDF 简历上传 + 差距分析"]),
-            ("v2.0", "2026.06.29", ["全流程联动：页面底部下一步按钮，首页流程指导"]),
-            ("v1.8", "2026.06.29", ["面试进步追踪：折线图 + 历史评分，首页数据看板"]),
-            ("v1.5", "2026.06.29", ["学习路线规划，首页 4 入口，子页面返回按钮"]),
-            ("v1.3", "2026.06.29", ["50+ 岗位库 + 搜索过滤，面试三层交互"]),
-            ("v1.2", "2026.06.29", ["UI 全面重写，去 AI 味，灰白极简风"]),
-            ("v1.1", "2026.06.29", ["面试 Prompt 大改：岗位动态注入，追问自适应，6 维度评估"]),
-            ("v1.0", "2026.06.29", ["MVP：JD 分析、简历优化、AI 模拟面试"]),
-        ]
-        for ver, date, items in changelog_sidebar:
-            st.markdown(f"**{ver}** · {date}")
-            for item in items:
-                st.markdown(f"<span style='font-size:12px;color:#78716c;'>— {item}</span>", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════
@@ -404,13 +397,25 @@ def _show_flow_nav(current_step: int):
 
     if current_step < 4:
         next_label, next_page = FLOW[current_step][1], FLOW[current_step][2]
-        skip_hint = "（可跳过）" if current_step == 3 else ""
-
         st.divider()
         _, bc, _ = st.columns([2, 1, 2])
         with bc:
-            if st.button("下一步：" + next_label + " → " + skip_hint, key="flow_next_" + str(current_step),
+            if st.button("下一步：" + next_label + " → ", key="flow_next_" + str(current_step),
                          use_container_width=True, type="primary"):
+                # 从学习路线 → 模拟面试时，带上 JD 上下文
+                if next_page == "interview":
+                    jd_text = st.session_state.get("jd_last_input", "")
+                    if jd_text.strip():
+                        st.session_state.interview_jd_context = jd_text
+                        # 自动识别岗位
+                        result = st.session_state.get("jd_last_result", "")
+                        auto_role = _guess_role(result, jd_text)
+                        st.session_state.interview_selected_role = auto_role
+                        st.session_state.interview_confirm_mode = True
+                    else:
+                        st.session_state.interview_confirm_mode = False
+                        st.session_state.interview_selected_role = None
+                        st.session_state.interview_jd_context = ""
                 st.session_state.current_page = next_page
                 st.rerun()
 
@@ -506,6 +511,7 @@ def _show_single_result(result: str, jd_text: str):
         if st.button(f"模拟面试：{guessed_role} →", key="jd_to_interview", type="primary", use_container_width=True):
             st.session_state.interview_selected_role = guessed_role
             st.session_state.interview_confirm_mode = True
+            st.session_state.interview_jd_context = jd_text
             st.session_state.current_page = "interview"
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -591,6 +597,7 @@ def _show_cached_result():
         if st.button(f"模拟面试：{guessed_role} →", key="jd_to_interview2", type="primary", use_container_width=True):
             st.session_state.interview_selected_role = guessed_role
             st.session_state.interview_confirm_mode = True
+            st.session_state.interview_jd_context = jd_text
             st.session_state.current_page = "interview"
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -694,48 +701,6 @@ if st.session_state.current_page == "home":
             if st.button(f"{title} →", key=f"go_{page}", use_container_width=True):
                 st.session_state.current_page = page
                 st.rerun()
-
-    # ── 产品数据看板 ──
-    jd_count = st.session_state.total_jd_analyses
-    resume_count = st.session_state.total_resume_optimizations
-    interview_count = st.session_state.total_interviews
-    role_count = len(st.session_state.roles_covered) if isinstance(st.session_state.roles_covered, set) else 0
-
-    st.markdown("<div style='margin-top:40px;'></div>", unsafe_allow_html=True)
-    d1, d2, d3, d4 = st.columns(4)
-    stats_items = [
-        (d1, f"{jd_count}", "JD 分析"),
-        (d2, f"{resume_count}", "简历优化"),
-        (d3, f"{interview_count}", "模拟面试"),
-        (d4, f"{role_count}", "覆盖岗位"),
-    ]
-    for col, num, label in stats_items:
-        with col:
-            st.markdown(f"""
-            <div style="text-align:center;padding:20px 8px;">
-                <div style="font-size:36px;font-weight:700;color:#1c1917;line-height:1.2;">{num}</div>
-                <div style="font-size:12px;color:#a8a29e;margin-top:4px;">{label}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    # 有面试记录时显示趋势提示
-    if interview_count > 0:
-        latest = get_latest_score()
-        delta = get_score_delta()
-        if latest is not None:
-            delta_text = ""
-            if delta is not None:
-                if delta > 0:
-                    delta_text = f' <span style="color:#16a34a;">↑{delta}</span>'
-                elif delta < 0:
-                    delta_text = f' <span style="color:#dc2626;">↓{abs(delta)}</span>'
-                else:
-                    delta_text = ' <span style="color:#a8a29e;">→</span>'
-            st.markdown(f"""
-            <div style="text-align:center;padding:4px 0 20px;">
-                <span style="font-size:12px;color:#a8a29e;">最近面试评分：{latest}/10{delta_text}</span>
-            </div>
-            """, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════
@@ -890,9 +855,7 @@ elif st.session_state.current_page == "jd":
             with st.spinner("正在横向对比…"):
                 jd_list = [s for s in st.session_state.jd_compare_slots if s.strip()]
                 result = compare_jds(jd_list)
-                # 对比也计入 JD 分析次数
-                for _ in jd_list:
-                    record_jd_analysis()
+                record_jd_compare(len(jd_list))
                 st.session_state.jd_compare_result = result
 
             st.divider()
@@ -1033,7 +996,6 @@ elif st.session_state.current_page == "roadmap":
     st.session_state.roadmap_jd_input = jd_summary
 
     st.markdown('<div style="font-size:13px;color:#a8a29e;margin:16px 0 4px;">学习周期</div>', unsafe_allow_html=True)
-    st.caption("选择你计划准备的时间长度")
     weeks = st.selectbox("学习周期", [2, 3, 4, 6, 8], index=1, label_visibility="collapsed",
                          format_func=lambda w: f"{w} 周" + ("（快速冲刺）" if w == 2 else "（推荐）" if w == 3 else "（扎实准备）" if w == 4 else "（深度提升）" if w == 6 else "（系统转型）"))
 
@@ -1044,6 +1006,7 @@ elif st.session_state.current_page == "roadmap":
         with st.spinner("正在规划…"):
             result = generate_roadmap(role, jd_summary, weeks)
         st.session_state.roadmap_result = result
+        st.session_state._roadmap_weeks = weeks
         record_roadmap()
 
     if st.session_state.roadmap_result:
@@ -1089,14 +1052,18 @@ elif st.session_state.current_page == "interview":
             st.session_state.interview_selected_role = None
         if "interview_confirm_mode" not in st.session_state:
             st.session_state.interview_confirm_mode = False
+        if "interview_jd_context" not in st.session_state:
+            st.session_state.interview_jd_context = ""
 
         # 确认页模式
         if st.session_state.interview_confirm_mode and st.session_state.interview_selected_role:
             role = st.session_state.interview_selected_role
             cat = next((r["category"] for r in ROLE_DATABASE if r["name"] == role), "")
+            jd_context = st.session_state.get("interview_jd_context", "")
             if st.button("← 返回", key="back_to_search"):
                 st.session_state.interview_confirm_mode = False
                 st.session_state.interview_selected_role = None
+                st.session_state.interview_jd_context = ""
                 st.rerun()
 
             st.markdown(f"""
@@ -1111,6 +1078,13 @@ elif st.session_state.current_page == "interview":
                 <p style="font-size:14px;color:#a8a29e;">{cat} · 实习面试模拟</p>
             </div>
             """, unsafe_allow_html=True)
+
+            # ── JD 上下文提示 ──
+            if jd_context.strip():
+                with st.expander("📋 面试将基于这份 JD 提问", expanded=False):
+                    st.caption(f"JD 内容（{len(jd_context)} 字）")
+                    st.markdown(jd_context[:1200] + ("…" if len(jd_context) > 1200 else ""))
+                    st.caption("AI 面试官会围绕这份 JD 中的技能和职责进行提问。")
 
             c1, c2, c3 = st.columns(3)
             with c1:
@@ -1139,16 +1113,11 @@ elif st.session_state.current_page == "interview":
             c_btn1, c_btn2, c_btn3 = st.columns([1, 2, 1])
             with c_btn2:
                 if st.button("开始面试", key="confirm_start", use_container_width=True, type="primary"):
-                    start_interview(role)
+                    start_interview(role, jd_context=jd_context)
                     st.session_state.interview_confirm_mode = False
                     st.session_state.interview_selected_role = None
+                    st.session_state.interview_jd_context = ""
                     st.rerun()
-
-            st.markdown("""
-            <div class="info-tip" style="margin-top:20px;text-align:center;">
-                <span style="font-size:13px;color:#78716c;">当成真实面试来回答。给具体例子 > 给观点。不会的就直说——这也加分。</span>
-            </div>
-            """, unsafe_allow_html=True)
 
         else:
             # ── 面试进步追踪（有历史记录时显示）──
@@ -1405,6 +1374,82 @@ elif st.session_state.current_page == "interview":
 
     if not st.session_state.interview_active:
         _show_flow_nav(4)
+
+# ═══════════════════════════════════════════
+# ── 页面：我的（个人主页）──
+# ═══════════════════════════════════════════
+elif st.session_state.current_page == "profile":
+    if st.button("← 首页", key="profile_home"):
+        st.session_state.current_page = "home"
+        st.rerun()
+    st.markdown("""
+    <div style="margin-bottom:24px;">
+        <h1>我的</h1>
+    </div>
+    """, unsafe_allow_html=True)
+
+    jd_hist = get_jd_history()
+    iv_hist = get_interview_history()
+
+    # ── 历史分析记录 ──
+    st.markdown("### 📋 历史分析")
+    if jd_hist:
+        for i, item in enumerate(jd_hist):
+            with st.expander(f"{item['role']} · {item['date']}", expanded=(i == 0)):
+                st.caption(f"JD 原文（{len(item.get('jd_full', ''))} 字）")
+                st.markdown(item.get("jd_full", item.get("jd_snippet", "")).replace("\n", "\n\n")[:3000])
+                st.caption("分析结果")
+                st.markdown(item.get("result", "")[:3000])
+    else:
+        st.markdown('<div style="color:#a8a29e;font-size:14px;padding:24px 0;text-align:center;">暂无分析记录<br><span style="font-size:12px;">去 JD 分析页贴一份岗位描述就会出现在这里</span></div>', unsafe_allow_html=True)
+
+    st.divider()
+
+    # ── 面试记录 ──
+    st.markdown("### 🎯 面试记录")
+    if iv_hist:
+        # 趋势图
+        scores_valid = [h for h in iv_hist if h.get("score") is not None]
+        if len(scores_valid) >= 2:
+            import pandas as pd
+            df_data = []
+            for h in reversed(scores_valid):
+                df_data.append({"面试": h["role"], "评分": h["score"]})
+            df = pd.DataFrame(df_data)
+            if len(df) >= 2:
+                st.line_chart(df.set_index("面试"), use_container_width=True, height=180)
+
+        for h in iv_hist:
+            color = "#1c1917" if h.get("score") and h["score"] >= 6 else "#dc2626"
+            score_str = str(h["score"]) if h.get("score") is not None else "—"
+            st.markdown(f"""
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin:4px 0;background:#fafaf9;border:1px solid #e7e5e4;border-radius:10px;">
+                <span style="font-weight:550;color:#1c1917;">{h['role']}</span>
+                <span style="display:flex;gap:20px;">
+                    <span style="color:#a8a29e;font-size:13px;">{h['date']}</span>
+                    <span style="font-weight:600;color:{color};">{score_str}/10</span>
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # 导出
+        st.markdown("<br>", unsafe_allow_html=True)
+        export_md = "# 我的求职记录\n\n## 面试记录\n\n"
+        for h in iv_hist:
+            export_md += f"- **{h['role']}** · {h['date']} · 评分 {h.get('score', '—')}/10\n"
+            export_md += f"  轮次: {h.get('rounds', '—')}\n\n"
+            export_md += f"  {h.get('evaluation', '')}\n\n---\n\n"
+        st.download_button("📥 导出面试记录", data=export_md, file_name="求职记录.md", mime="text/markdown", use_container_width=True)
+    else:
+        st.markdown('<div style="color:#a8a29e;font-size:14px;padding:24px 0;text-align:center;">暂无面试记录<br><span style="font-size:12px;">完成一次模拟面试后会自动记录下来</span></div>', unsafe_allow_html=True)
+
+    # ── 清除数据 ──
+    st.divider()
+    with st.expander("⚙️ 数据管理", expanded=False):
+        st.caption("所有数据存储在你本地浏览器和文件中，不会被上传。")
+        if st.button("清除全部记录", type="secondary", use_container_width=True):
+            clear_all_history()
+            st.rerun()
 
 # ═══════════════════════════════════════════
 # 底部

@@ -36,8 +36,13 @@ def init_interview_state():
             st.session_state[key] = value
 
 
-def start_interview(role_name: str):
-    """开始一场新的模拟面试"""
+def start_interview(role_name: str, jd_context: str = ""):
+    """开始一场新的模拟面试
+
+    Args:
+        role_name: 岗位名称
+        jd_context: 岗位 JD 原文（可选，有则围绕 JD 提问）
+    """
     st.session_state.interview_active = True
     st.session_state.interview_round = 0
     st.session_state.interview_history = []
@@ -46,9 +51,21 @@ def start_interview(role_name: str):
     st.session_state.interview_role = role_name
     st.session_state.waiting_for_answer = True
 
-    # 动态注入岗位到 Prompt
-    system_prompt = INTERVIEWER_SYSTEM.format(role=role_name)
-    first_q_prompt = INTERVIEW_FIRST_QUESTION.format(role=role_name)
+    # JD 上下文格式化
+    if jd_context.strip():
+        jd_section = f"""## 岗位 JD 参考
+以下是候选人申请的岗位 JD，你的面试问题必须围绕以下要求展开：
+
+{jd_context[:2000]}
+
+请紧扣这份 JD 中的技能要求和职责描述来提问。"""
+    else:
+        jd_section = "（候选人未提供具体 JD，请根据「{role}」岗位的通用要求提问。）".format(role=role_name)
+
+    # 动态注入岗位 + JD 到 Prompt
+    system_prompt = INTERVIEWER_SYSTEM.format(role=role_name, jd_context=jd_section)
+    jd_for_first_q = f"以下是岗位JD参考：\n{jd_context[:1500]}" if jd_context.strip() else "（无具体JD，请基于岗位通用要求提问）"
+    first_q_prompt = INTERVIEW_FIRST_QUESTION.format(role=role_name, jd_context=jd_for_first_q)
 
     # 生成第一个问题
     with st.spinner("面试官正在准备第一个问题..."):
@@ -59,6 +76,7 @@ def start_interview(role_name: str):
 
     st.session_state.current_question = first_question
     st.session_state._system_prompt = system_prompt  # 缓存，后续追问复用
+    st.session_state._has_jd_context = bool(jd_context.strip())  # 标记有 JD 上下文
     st.session_state.interview_round = 1
     st.session_state.interview_history.append(
         {"role": "assistant", "content": first_question}

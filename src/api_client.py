@@ -9,7 +9,18 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 
-load_dotenv()
+# 多路径尝试加载 .env（Streamlit 运行时 cwd 可能不是项目根目录）
+for _try_dir in [
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # src/../ = 项目根
+    os.getcwd(),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ai-career-coach"),
+]:
+    _env_path = os.path.join(_try_dir, ".env")
+    if os.path.isfile(_env_path):
+        load_dotenv(_env_path)
+        break
+else:
+    load_dotenv()  # 兜底：从 cwd 找
 
 _client = None
 
