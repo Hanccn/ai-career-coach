@@ -1,4 +1,3 @@
-from __future__ import annotations
 """
 产品数据统计、面试进步追踪、使用记录持久化
 """
@@ -9,11 +8,11 @@ import os
 from datetime import datetime
 
 # ── JSON 持久化路径 ──
-def _history_path() -> str:
+def _history_path():
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "usage_history.json")
 
 
-def _load_history() -> dict:
+def _load_history():
     path = _history_path()
     if os.path.isfile(path):
         try:
@@ -24,7 +23,7 @@ def _load_history() -> dict:
     return {"jd_analyses": [], "resumes": [], "roadmaps": [], "interviews": []}
 
 
-def _save_history(data: dict):
+def _save_history(data):
     try:
         with open(_history_path(), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -68,7 +67,6 @@ def record_jd_analysis():
     jd_text = st.session_state.get("jd_last_input", "")
     result = st.session_state.get("jd_last_result", "")
     guessed = st.session_state.get("_last_guessed_role", "")
-    # 在 app.py 调用时已经从 _guess_role 得到结果，这里也尝试提取
     if not guessed:
         combined = (result + jd_text).lower()
         kw_map = {
@@ -98,7 +96,7 @@ def record_jd_analysis():
     _save_history(hist)
 
 
-def record_jd_compare(count: int = 0):
+def record_jd_compare(count=0):
     """多份 JD 对比也计入"""
     for _ in range(count):
         st.session_state.total_jd_analyses += 1
@@ -126,7 +124,7 @@ def record_roadmap():
     _save_history(hist)
 
 
-def record_interview(role: str, evaluation_text: str):
+def record_interview(role, evaluation_text):
     st.session_state.total_interviews += 1
     if isinstance(st.session_state.roles_covered, set):
         st.session_state.roles_covered.add(role)
@@ -146,15 +144,15 @@ def record_interview(role: str, evaluation_text: str):
 
 
 # ── 历史查询 ──
-def get_jd_history() -> list:
+def get_jd_history():
     return list(reversed(_load_history().get("jd_analyses", [])))
 
 
-def get_interview_history() -> list:
+def get_interview_history():
     return list(reversed(_load_history().get("interviews", [])))
 
 
-def get_all_history() -> dict:
+def get_all_history():
     return _load_history()
 
 
@@ -164,7 +162,7 @@ def clear_all_history():
 
 
 # ── 评分工具 ──
-def _parse_score(text: str) -> int | None:
+def _parse_score(text):
     patterns = [
         r"\*\*综合\*\*\s*\|\s*\*?\*?(\d+)\*?\*?",
         r"综合\s*\|\s*(\d+)",
@@ -180,7 +178,7 @@ def _parse_score(text: str) -> int | None:
     return None
 
 
-def get_score_trend() -> list:
+def get_score_trend():
     return [
         {"index": i + 1, "role": s["role"], "score": s["score"], "date": s["date"]}
         for i, s in enumerate(st.session_state.interview_scores)
@@ -188,14 +186,14 @@ def get_score_trend() -> list:
     ]
 
 
-def get_latest_score() -> int | None:
+def get_latest_score():
     scores = st.session_state.interview_scores
     if scores and scores[-1]["score"] is not None:
         return scores[-1]["score"]
     return None
 
 
-def get_score_delta() -> int | None:
+def get_score_delta():
     scores = [s["score"] for s in st.session_state.interview_scores if s["score"] is not None]
     if len(scores) >= 2:
         return scores[-1] - scores[-2]
