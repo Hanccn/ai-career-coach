@@ -58,8 +58,8 @@ def analyze_gap(jd_analysis: str, resume_text: str):
     messages = [
         {"role": "system", "content": GAP_SYSTEM},
         {"role": "user", "content": GAP_USER.format(
-            jd_analysis=jd_analysis[:3000],
-            resume_text=resume_text[:3000],
+            jd_analysis=jd_analysis[:3500],
+            resume_text=resume_text[:3500],
         )},
     ]
-    return chat(messages, temperature=0.5, max_tokens=3072)
+    return chat(messages, temperature=0.6, max_tokens=4096)
